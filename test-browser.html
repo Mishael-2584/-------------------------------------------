@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>North Rift Valley Field - Server Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background 0.3s;
+        }
+        .test-button:hover {
+            background: #45a049;
+        }
+        .test-button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { border-left: 4px solid #4CAF50; }
+        .error { border-left: 4px solid #f44336; }
+        .loading { border-left: 4px solid #ff9800; }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.success { background: #4CAF50; }
+        .status.error { background: #f44336; }
+        .status.loading { background: #ff9800; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏛️ North Rift Valley Field Server Test</h1>
+        
+        <div class="test-section">
+            <h3>Server Status Tests</h3>
+            <button class="test-button" onclick="testHealth()">Test Health Endpoint</button>
+            <button class="test-button" onclick="testRoot()">Test Root Endpoint</button>
+            <button class="test-button" onclick="testAPI()">Test API Endpoints</button>
+            <button class="test-button" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div class="test-section">
+            <h3>API Endpoint Tests</h3>
+            <button class="test-button" onclick="testChurches()">Test Churches API</button>
+            <button class="test-button" onclick="testEvents()">Test Events API</button>
+            <button class="test-button" onclick="testContact()">Test Contact API</button>
+            <button class="test-button" onclick="testLeadership()">Test Leadership API</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(title, content, type = 'success') {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            resultDiv.innerHTML = `
+                <strong>${title}</strong> <span class="status ${type}">${type.toUpperCase()}</span>
+                <div style="margin-top: 10px; font-size: 12px; color: #ccc;">${timestamp}</div>
+                <div style="margin-top: 10px;">${content}</div>
+            `;
+            
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        async function makeRequest(url, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(url, options);
+                const result = await response.text();
+                
+                let parsedResult;
+                try {
+                    parsedResult = JSON.parse(result);
+                } catch {
+                    parsedResult = result;
+                }
+
+                return {
+                    success: response.ok,
+                    status: response.status,
+                    data: parsedResult
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    status: 0,
+                    data: error.message
+                };
+            }
+        }
+
+        async function testHealth() {
+            addResult('Health Check', 'Testing /api/health endpoint...', 'loading');
+            
+            const result = await makeRequest(`${API_BASE}/api/health`);
+            
+            if (result.success) {
+                addResult('Health Check', `✅ Server is running!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                addResult('Health Check', `❌ Server connection failed!\n\nError: ${result.data}\nStatus: ${result.status}`, 'error');
+            }
+        }
+
+        async function testRoot() {
+            addResult('Root Endpoint', 'Testing root endpoint...', 'loading');
+            
+            const result = await makeRequest(`${API_BASE}/`);
+            
+            if (result.success) {
+                addResult('Root Endpoint', `✅ Root endpoint working!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                addResult('Root Endpoint', `❌ Root endpoint failed!\n\nError: ${result.data}\nStatus: ${result.status}`, 'error');
+            }
+        }
+
+        async function testAPI() {
+            addResult('API Test', 'Testing multiple API endpoints...', 'loading');
+            
+            const endpoints = [
+                '/api/health',
+                '/api/churches',
+                '/api/events',
+                '/api/departments',
+                '/api/leadership'
+            ];
+            
+            let results = [];
+            for (const endpoint of endpoints) {
+                const result = await makeRequest(`${API_BASE}${endpoint}`);
+                results.push(`${endpoint}: ${result.success ? '✅' : '❌'} (${result.status})`);
+            }
+            
+            addResult('API Test', `API Endpoint Status:\n${results.join('\n')}`, 'success');
+        }
+
+        async function testChurches() {
+            addResult('Churches API', 'Testing /api/churches endpoint...', 'loading');
+            
+            const result = await makeRequest(`${API_BASE}/api/churches`);
+            
+            if (result.success) {
+                addResult('Churches API', `✅ Churches API working!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                addResult('Churches API', `❌ Churches API failed!\n\nError: ${result.data}\nStatus: ${result.status}`, 'error');
+            }
+        }
+
+        async function testEvents() {
+            addResult('Events API', 'Testing /api/events endpoint...', 'loading');
+            
+            const result = await makeRequest(`${API_BASE}/api/events`);
+            
+            if (result.success) {
+                addResult('Events API', `✅ Events API working!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                addResult('Events API', `❌ Events API failed!\n\nError: ${result.data}\nStatus: ${result.status}`, 'error');
+            }
+        }
+
+        async function testContact() {
+            addResult('Contact API', 'Testing /api/contact endpoint...', 'loading');
+            
+            const testData = {
+                name: 'Test User',
+                email: 'test@example.com',
+                subject: 'Test Message',
+                message: 'This is a test message from the browser test page.'
+            };
+            
+            const result = await makeRequest(`${API_BASE}/api/contact`, 'POST', testData);
+            
+            if (result.success) {
+                addResult('Contact API', `✅ Contact API working!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                addResult('Contact API', `❌ Contact API failed!\n\nError: ${result.data}\nStatus: ${result.status}`, 'error');
+            }
+        }
+
+        async function testLeadership() {
+            addResult('Leadership API', 'Testing /api/leadership endpoint...', 'loading');
+            
+            const result = await makeRequest(`${API_BASE}/api/leadership`);
+            
+            if (result.success) {
+                addResult('Leadership API', `✅ Leadership API working!\n\nResponse:\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                addResult('Leadership API', `❌ Leadership API failed!\n\nError: ${result.data}\nStatus: ${result.status}`, 'error');
+            }
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        // Auto-test on page load
+        window.onload = function() {
+            addResult('Page Loaded', 'Browser test page loaded successfully. Click the buttons above to test the server endpoints.', 'success');
+        };
+    </script>
+</body>
+</html>
